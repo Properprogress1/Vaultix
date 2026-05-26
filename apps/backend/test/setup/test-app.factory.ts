@@ -15,6 +15,7 @@ const mockStellarService = {
   getAccount: jest.fn().mockResolvedValue({
     id: 'mock-account',
     sequenceNumber: () => '1',
+    balances: [{ asset_type: 'native', balance: '1000000' }],
   }),
   validateAsset: jest.fn().mockResolvedValue(true),
   buildTransaction: jest.fn().mockResolvedValue({

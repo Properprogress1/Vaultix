@@ -15,6 +15,8 @@ import {
 } from '../../src/modules/escrow/entities/party.entity';
 import { Condition } from '../../src/modules/escrow/entities/condition.entity';
 import { EscrowEvent } from '../../src/modules/escrow/entities/escrow-event.entity';
+import { AllowedAsset } from '../../src/modules/assets/entities/allowed-asset.entity';
+import { DataSource } from 'typeorm';
 
 function createMockKeypair(): Keypair {
   return Keypair.random();
@@ -43,6 +45,16 @@ describe('Events (e2e)', () => {
 
     app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
+
+    const allowedAssetRepository = app
+      .get(DataSource)
+      .getRepository(AllowedAsset);
+    await allowedAssetRepository.save({
+      code: 'XLM',
+      displayName: 'Stellar Lumens',
+      decimals: 7,
+      active: true,
+    });
 
     // Authenticate first user
     const challengeResponse = await request(httpServer)
