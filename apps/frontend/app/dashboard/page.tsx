@@ -78,12 +78,12 @@ function DashboardContent() {
       {showActivity && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowActivity(false)} />
-          <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-900">Activity Feed</h2>
+          <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-card text-card-foreground shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="font-semibold text-foreground">Activity Feed</h2>
               <button
                 onClick={() => setShowActivity(false)}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground cursor-pointer"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -97,20 +97,20 @@ function DashboardContent() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 h-fit">
+        <div className="lg:col-span-2 bg-card text-card-foreground rounded-xl shadow-sm border border-border p-4 sm:p-6 h-fit">
           <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Your Escrows</h2>
+            <h2 className="text-xl font-bold text-foreground">Your Escrows</h2>
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setShowActivity(true)}
-                className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 px-3"
+                className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center gap-1.5 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted px-3 cursor-pointer"
               >
                 <Activity className="w-4 h-4" />
                 <span className="text-xs font-medium">Activity</span>
               </button>
               <Link
                 href="/escrow/create"
-                className="min-h-[44px] flex items-center gap-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium px-3 hover:bg-blue-700 transition-colors"
+                className="min-h-[44px] flex items-center gap-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium px-3 hover:bg-blue-700 transition-colors cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">New Escrow</span>
@@ -118,7 +118,7 @@ function DashboardContent() {
               {hasActiveFilters && (
                 <button
                   onClick={() => router.push(pathname)}
-                  className="min-h-[44px] flex items-center gap-1 text-sm text-red-600 hover:text-red-800 font-medium px-2"
+                  className="min-h-[44px] flex items-center gap-1 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium px-2 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Clear filters</span>
@@ -162,17 +162,17 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
+    <div className="min-h-screen bg-background text-foreground py-6 sm:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-6 sm:mb-10">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 sm:text-4xl">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground sm:text-4xl">
             Escrow Dashboard
           </h1>
-          <p className="mt-2 sm:mt-4 text-base sm:text-lg text-gray-500">
+          <p className="mt-2 sm:mt-4 text-base sm:text-lg text-muted-foreground">
             Manage all your escrow agreements in one place
           </p>
         </div>
-        <Suspense fallback={<div className="text-center py-20 text-gray-500">Loading Dashboard...</div>}>
+        <Suspense fallback={<div className="text-center py-20 text-muted-foreground">Loading Dashboard...</div>}>
           <DashboardContent />
         </Suspense>
       </div>

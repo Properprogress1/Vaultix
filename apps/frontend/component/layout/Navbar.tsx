@@ -2,8 +2,9 @@
 
 import { useState, useEffect, JSX } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sun, Moon } from "lucide-react";
 import NotificationBell from "@/components/common/NotificationBell";
+import { useTheme } from "@/components/ThemeProvider";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -15,6 +16,7 @@ const NAV_LINKS = [
 export default function Navbar(): JSX.Element {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -63,11 +65,25 @@ export default function Navbar(): JSX.Element {
                   {label}
                 </Link>
               ))}
+              <button
+                onClick={toggleTheme}
+                className="p-2 text-gray-300 hover:text-white rounded-lg focus:outline-none transition-colors cursor-pointer"
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
               <NotificationBell />
             </div>
 
             {/* Mobile controls */}
             <div className="md:hidden flex items-center gap-2">
+              <button
+                onClick={toggleTheme}
+                className="p-2 text-gray-300 hover:text-white rounded-lg focus:outline-none transition-colors cursor-pointer"
+                aria-label="Toggle Theme"
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
               <NotificationBell />
               <button
                 onClick={() => setIsMenuOpen((v) => !v)}

@@ -28,18 +28,18 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'created':
     case 'funded':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
     case 'confirmed':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300';
     case 'released':
     case 'completed':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300';
     case 'cancelled':
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-gray-300';
     case 'disputed':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-gray-300';
   }
 };
 
@@ -84,7 +84,7 @@ const EscrowCard: React.FC<EscrowCardProps> = ({ escrow }) => {
           <a 
             key="view-details"
             href={`/escrow/${escrow.id}`}
-            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
           >
             View Details
           </a>
@@ -95,14 +95,14 @@ const EscrowCard: React.FC<EscrowCardProps> = ({ escrow }) => {
           <a 
             key="confirm-delivery"
             href={`/escrow/${escrow.id}/confirm`}
-            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
           >
             Confirm Delivery
           </a>,
           <a 
             key="dispute"
             href={`/escrow/${escrow.id}/dispute`}
-            className="text-red-600 hover:text-red-900 text-sm font-medium ml-4"
+            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 text-sm font-medium ml-4"
           >
             Dispute
           </a>
@@ -113,7 +113,7 @@ const EscrowCard: React.FC<EscrowCardProps> = ({ escrow }) => {
           <a 
             key="view-details"
             href={`/escrow/${escrow.id}`}
-            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
           >
             View Details
           </a>
@@ -124,7 +124,7 @@ const EscrowCard: React.FC<EscrowCardProps> = ({ escrow }) => {
           <a 
             key="view-details"
             href={`/escrow/${escrow.id}`}
-            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
           >
             View Details
           </a>
@@ -135,7 +135,7 @@ const EscrowCard: React.FC<EscrowCardProps> = ({ escrow }) => {
           <a 
             key="view-details"
             href={`/escrow/${escrow.id}`}
-            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
           >
             View Details
           </a>
@@ -146,7 +146,7 @@ const EscrowCard: React.FC<EscrowCardProps> = ({ escrow }) => {
           <a 
             key="view-details"
             href={`/escrow/${escrow.id}`}
-            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
           >
             View Details
           </a>
@@ -157,37 +157,37 @@ const EscrowCard: React.FC<EscrowCardProps> = ({ escrow }) => {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-card text-card-foreground border border-border rounded-lg shadow-sm overflow-hidden">
       <div className="p-6">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">
             <div className="flex items-center">
-              <h3 className="text-lg font-medium text-gray-900 truncate">{escrow.title}</h3>
+              <h3 className="text-lg font-medium text-foreground truncate">{escrow.title}</h3>
               <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(escrow.status)}`}>
                 {getStatusText(escrow.status)}
               </span>
             </div>
-            <p className="mt-1 text-sm text-gray-500 line-clamp-2">{escrow.description}</p>
+            <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{escrow.description}</p>
             
             <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm font-medium text-gray-500">Amount</p>
-                <p className="text-sm text-gray-900">{escrow.amount} {escrow.asset}</p>
+                <p className="text-sm font-medium text-muted-foreground">Amount</p>
+                <p className="text-sm text-foreground">{escrow.amount} {escrow.asset}</p>
               </div>
               
               <div>
-                <p className="text-sm font-medium text-gray-500">Counterparty</p>
-                <p className="text-sm text-gray-900 truncate">{escrow.counterpartyAddress.substring(0, 10)}...</p>
+                <p className="text-sm font-medium text-muted-foreground">Counterparty</p>
+                <p className="text-sm text-foreground truncate">{escrow.counterpartyAddress.substring(0, 10)}...</p>
               </div>
               
               <div>
-                <p className="text-sm font-medium text-gray-500">Created</p>
-                <p className="text-sm text-gray-900">{formatDate(escrow.createdAt)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Created</p>
+                <p className="text-sm text-foreground">{formatDate(escrow.createdAt)}</p>
               </div>
               
               <div>
-                <p className="text-sm font-medium text-gray-500">Deadline</p>
-                <p className="text-sm text-gray-900">{formatDate(escrow.deadline)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Deadline</p>
+                <p className="text-sm text-foreground">{formatDate(escrow.deadline)}</p>
               </div>
             </div>
           </div>

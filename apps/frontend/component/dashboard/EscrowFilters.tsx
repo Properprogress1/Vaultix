@@ -44,7 +44,7 @@ const EscrowFilters: React.FC<EscrowFiltersProps> = ({
   }, [localSearch, onSearchChange, searchQuery]);
 
   return (
-    <div className="space-y-6 mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+    <div className="space-y-6 mb-8 p-4 bg-muted/30 rounded-xl border border-border">
       {/* Search and Sort Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Input
@@ -55,9 +55,9 @@ const EscrowFilters: React.FC<EscrowFiltersProps> = ({
         />
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Sort By</label>
+          <label className="block text-sm font-semibold text-foreground mb-1">Sort By</label>
           <select
-            className="w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2.5 border bg-white text-gray-900"
+            className="w-full rounded-lg border-border shadow-sm focus:ring-primary focus:border-primary p-2.5 border bg-background text-foreground"
             value={sortBy}
             onChange={(e) => onSortChange(e.target.value as any, sortOrder)}
           >
@@ -68,9 +68,9 @@ const EscrowFilters: React.FC<EscrowFiltersProps> = ({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Order</label>
+          <label className="block text-sm font-semibold text-foreground mb-1">Order</label>
           <select
-            className="w-full rounded-lg border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2.5 border bg-white text-gray-900"
+            className="w-full rounded-lg border-border shadow-sm focus:ring-primary focus:border-primary p-2.5 border bg-background text-foreground"
             value={sortOrder}
             onChange={(e) => onSortChange(sortBy, e.target.value as any)}
           >
@@ -81,22 +81,22 @@ const EscrowFilters: React.FC<EscrowFiltersProps> = ({
       </div>
 
       {/* Advanced Filters Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 pt-4 border-t border-gray-200">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 pt-4 border-t border-border">
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-gray-700">Amount Range</label>
+          <label className="block text-sm font-semibold text-foreground">Amount Range</label>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <input
               type="number"
               placeholder="Min"
-              className="w-full rounded-lg border-gray-300 p-2 border bg-white text-gray-900"
+              className="w-full rounded-lg border-border p-2 border bg-background text-foreground"
               value={minAmount}
               onChange={(e) => onAmountChange(e.target.value, maxAmount)}
             />
-            <span className="hidden sm:block text-gray-400">-</span>
+            <span className="hidden sm:block text-muted-foreground">-</span>
             <input
               type="number"
               placeholder="Max"
-              className="w-full rounded-lg border-gray-300 p-2 border bg-white text-gray-900"
+              className="w-full rounded-lg border-border p-2 border bg-background text-foreground"
               value={maxAmount}
               onChange={(e) => onAmountChange(minAmount, e.target.value)}
             />
@@ -104,18 +104,18 @@ const EscrowFilters: React.FC<EscrowFiltersProps> = ({
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-gray-700">Date Range</label>
+          <label className="block text-sm font-semibold text-foreground">Date Range</label>
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <input
               type="date"
-              className="w-full rounded-lg border-gray-300 p-2 border bg-white text-gray-900"
+              className="w-full rounded-lg border-border p-2 border bg-background text-foreground"
               value={fromDate}
               onChange={(e) => onDateChange(e.target.value, toDate)}
             />
-            <span className="text-gray-400 text-center sm:block">to</span>
+            <span className="text-muted-foreground text-center sm:block">to</span>
             <input
               type="date"
-              className="w-full rounded-lg border-gray-300 p-2 border bg-white text-gray-900"
+              className="w-full rounded-lg border-border p-2 border bg-background text-foreground"
               value={toDate}
               onChange={(e) => onDateChange(fromDate, e.target.value)}
             />

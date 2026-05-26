@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import type { Server } from 'http';
 import { AppModule } from '../../src/app.module';
+import { createTestApp } from '../setup/test-app.factory';
 import { Keypair } from 'stellar-sdk';
 
 // Mock Stellar keypair for testing
@@ -35,21 +36,16 @@ describe('AuthController (e2e)', () => {
   let testKeypair: Keypair;
   let testWalletAddress: string;
   let accessToken: string;
-
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    await app.init();
+    app = await createTestApp(undefined, (appInstance) => {
+      appInstance.useGlobalPipes(
+        new ValidationPipe({
+          whitelist: true,
+          forbidNonWhitelisted: true,
+          transform: true,
+        }),
+      );
+    });
     httpServer = app.getHttpServer() as Server;
 
     // Generate a random keypair for testing

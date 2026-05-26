@@ -5,6 +5,7 @@ import type { Server } from 'http';
 import { DataSource, Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AppModule } from '../../src/app.module';
+import { createTestApp } from '../setup/test-app.factory';
 import { Keypair } from 'stellar-sdk';
 import {
   Escrow,
@@ -49,13 +50,7 @@ describe('Escrow (e2e)', () => {
     secondKeypair = createMockKeypair();
     secondWalletAddress = secondKeypair.publicKey();
 
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-    await app.init();
+    app = await createTestApp();
     httpServer = app.getHttpServer() as Server;
     escrowRepository = app.get(DataSource).getRepository(Escrow);
 
@@ -187,7 +182,7 @@ describe('Escrow (e2e)', () => {
           title: 'Test Escrow',
           description: 'Test description',
           amount: 100,
-          asset: 'XLM',
+          asset: { code: 'XLM' },
           parties: [{ userId: secondUserId, role: PartyRole.SELLER }],
         })
         .expect(201);
@@ -289,7 +284,7 @@ describe('Escrow (e2e)', () => {
     async function createOverviewEscrow(params: {
       title: string;
       amount?: number;
-      asset?: string;
+      asset?: { code: string; issuer?: string };
       expiresAt?: string;
     }): Promise<string> {
       const response = await request(httpServer)
@@ -298,7 +293,7 @@ describe('Escrow (e2e)', () => {
         .send({
           title: params.title,
           amount: params.amount ?? 100,
-          asset: params.asset ?? 'XLM',
+          asset: params.asset ?? { code: 'XLM' },
           type: EscrowType.STANDARD,
           expiresAt: params.expiresAt,
           parties: [{ userId: secondUserId, role: PartyRole.SELLER }],
@@ -588,7 +583,7 @@ describe('Escrow (e2e)', () => {
         title: 'Dispute Test Escrow',
         description: 'Test description',
         amount: 100,
-        asset: 'XLM',
+        asset: { code: 'XLM' },
         parties: [
           { userId: secondUserId, role: PartyRole.SELLER },
           { userId: arbitratorUserId, role: PartyRole.ARBITRATOR },

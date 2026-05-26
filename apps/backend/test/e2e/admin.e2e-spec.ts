@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
+import { createTestApp } from '../setup/test-app.factory';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User, UserRole } from 'src/modules/user/entities/user.entity';
 import { AuthGuard } from '../../src/modules/auth/middleware/auth.guard';
@@ -14,11 +15,8 @@ describe('Admin API (e2e)', () => {
   let targetUserId: string;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideGuard(AuthGuard)
-      .useValue({
+    app = await createTestApp((builder) =>
+      builder.overrideGuard(AuthGuard).useValue({
         canActivate: (context: import('@nestjs/common').ExecutionContext) => {
           const req = context.switchToHttp().getRequest<{
             headers: { authorization?: string };
@@ -34,11 +32,8 @@ describe('Admin API (e2e)', () => {
           }
           return false;
         },
-      })
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-    await app.init();
+      }),
+    );
 
     // Create test users
     const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
