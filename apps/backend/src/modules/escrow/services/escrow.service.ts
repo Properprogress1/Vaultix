@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   ConflictException,
   UnprocessableEntityException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository, SelectQueryBuilder } from 'typeorm';
@@ -47,9 +48,12 @@ import { EscrowLifecycleService } from '../escrow-lifecycle.service';
 import { EscrowFundingService } from '../escrow-funding.service';
 import { EscrowDisputeService } from '../escrow-dispute.service';
 import { EscrowQueryService } from '../escrow-query.service';
+import { StellarService } from '../../../services/stellar.service';
 
 @Injectable()
 export class EscrowService {
+  private readonly logger = new Logger(EscrowService.name);
+
   constructor(
     @InjectRepository(Escrow)
     private escrowRepository: Repository<Escrow>,
@@ -73,6 +77,7 @@ export class EscrowService {
     private readonly funding: EscrowFundingService,
     private readonly dispute: EscrowDisputeService,
     private readonly query: EscrowQueryService,
+    private readonly stellarService: StellarService,
   ) {}
 
   async create(
@@ -80,6 +85,120 @@ export class EscrowService {
     creatorId: string,
     ipAddress?: string,
   ): Promise<Escrow> {
+    // Validate Asset code and issuer
+    const assetCode = dto.asset?.code || 'XLM';
+    const assetIssuer = dto.asset?.issuer || null;
+
+    const allowedAsset = await this.assetRepository.findOne({
+      where: {
+        code: assetCode,
+        issuer: assetIssuer || undefined,
+        active: true,
+      },
+    });
+
+    if (!allowedAsset) {
+      throw new BadRequestException(
+        `Asset ${assetCode} is not allowed or inactive`,
+      );
+    }
+
+    // Validate decimal precision of the amount
+    const amountStr = dto.amount.toString();
+    const parts = amountStr.split('.');
+    if (parts.length > 1 && parts[1].length > allowedAsset.decimals) {
+      throw new BadRequestException(
+        `Amount exceeds asset's decimal precision of ${allowedAsset.decimals} decimal places`,
+      );
+    }
+
+    // Verify creator has registered wallet address and sufficient balance
+    const creatorUser = await this.userRepository.findOne({
+      where: { id: creatorId },
+    });
+    if (!creatorUser || !creatorUser.walletAddress) {
+      throw new BadRequestException('Creator has no registered wallet address');
+    }
+
+    try {
+      const creatorAccount = await this.stellarService.getAccount(
+        creatorUser.walletAddress,
+      );
+      const creatorBalance = creatorAccount.balances.find((b) => {
+        if (assetCode === 'XLM' || assetCode === 'native') {
+          return b.asset_type === 'native';
+        } else {
+          return b.asset_code === assetCode && b.asset_issuer === assetIssuer;
+        }
+      });
+
+      if (!creatorBalance) {
+        if (assetCode === 'XLM') {
+          throw new BadRequestException(
+            'Creator account has no XLM balance or does not exist',
+          );
+        } else {
+          throw new BadRequestException(
+            `Creator does not have a trustline for the asset ${assetCode}. Please establish a trustline first.`,
+          );
+        }
+      }
+
+      if (parseFloat(creatorBalance.balance) < dto.amount) {
+        throw new BadRequestException(
+          `Insufficient balance. Creator has ${creatorBalance.balance} ${assetCode}, needs ${dto.amount}`,
+        );
+      }
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to verify creator balance: ${error instanceof Error ? error.message : 'account may not exist'}`,
+      );
+    }
+
+    // Verify destination account (recipient/seller) has a trustline for the custom token
+    if (assetCode !== 'XLM') {
+      const sellerParty = dto.parties.find((p) => p.role === PartyRole.SELLER);
+      if (!sellerParty) {
+        throw new BadRequestException(
+          'Seller party is required to verify trustline',
+        );
+      }
+
+      const sellerUser = await this.userRepository.findOne({
+        where: { id: sellerParty.userId },
+      });
+      if (!sellerUser || !sellerUser.walletAddress) {
+        throw new BadRequestException(
+          'Seller has no registered wallet address',
+        );
+      }
+
+      try {
+        const sellerAccount = await this.stellarService.getAccount(
+          sellerUser.walletAddress,
+        );
+        const sellerBalance = sellerAccount.balances.find(
+          (b) => b.asset_code === assetCode && b.asset_issuer === assetIssuer,
+        );
+
+        if (!sellerBalance) {
+          throw new BadRequestException(
+            `Destination account ${sellerUser.walletAddress} does not trust the asset ${assetCode}. Please ask the seller to add a trustline for this asset first.`,
+          );
+        }
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        }
+        throw new BadRequestException(
+          `Destination account ${sellerUser.walletAddress} is not funded or does not trust the asset ${assetCode}.`,
+        );
+      }
+    }
+
     let metadataHash: string | undefined;
     if (dto.metadataHash) {
       try {
@@ -334,6 +453,18 @@ export class EscrowService {
       );
     }
 
+    if (query.assetCode) {
+      qb.andWhere('escrow.assetCode = :assetCode', {
+        assetCode: query.assetCode,
+      });
+    }
+
+    if (query.assetIssuer) {
+      qb.andWhere('escrow.assetIssuer = :assetIssuer', {
+        assetIssuer: query.assetIssuer,
+      });
+    }
+
     const sortOrder = query.sortOrder === SortOrder.ASC ? 'ASC' : 'DESC';
     qb.orderBy(`escrow.${query.sortBy || 'createdAt'}`, sortOrder);
 
@@ -509,6 +640,7 @@ export class EscrowService {
         walletAddress,
         String(dto.amount),
         escrow.assetCode ?? 'XLM',
+        escrow.assetIssuer ?? undefined,
       );
 
     const fundedAt = new Date();
@@ -1020,7 +1152,80 @@ export class EscrowService {
         : EscrowStatus.COMPLETED;
 
     validateTransition(escrow.status, nextEscrowStatus);
-    await this.escrowRepository.update(escrowId, { status: nextEscrowStatus });
+
+    // Resolve dispute on-chain if relevant
+    let stellarTxHash: string | undefined;
+    try {
+      const arbitratorParty = escrow.parties.find(
+        (p) => p.role === PartyRole.ARBITRATOR && p.userId === arbitratorUserId,
+      );
+      const buyerParty = escrow.parties.find((p) => p.role === PartyRole.BUYER);
+      const sellerParty = escrow.parties.find(
+        (p) => p.role === PartyRole.SELLER,
+      );
+
+      if (arbitratorParty && buyerParty && sellerParty) {
+        const arbitratorUser = await this.userRepository.findOne({
+          where: { id: arbitratorUserId },
+        });
+        const buyerUser = await this.userRepository.findOne({
+          where: { id: buyerParty.userId },
+        });
+        const sellerUser = await this.userRepository.findOne({
+          where: { id: sellerParty.userId },
+        });
+
+        if (
+          arbitratorUser?.walletAddress &&
+          buyerUser?.walletAddress &&
+          sellerUser?.walletAddress
+        ) {
+          let winnerPublicKey = sellerUser.walletAddress; // Default to seller
+          let splitWinnerAmount: string | undefined;
+
+          if (dto.outcome === DisputeOutcome.REFUNDED_TO_BUYER) {
+            winnerPublicKey = buyerUser.walletAddress;
+          } else if (
+            dto.outcome === DisputeOutcome.SPLIT &&
+            dto.sellerPercent !== undefined
+          ) {
+            winnerPublicKey = sellerUser.walletAddress;
+            const totalAmount = Number(escrow.amount);
+            const asset = await this.assetRepository.findOne({
+              where: {
+                code: escrow.assetCode,
+                issuer: escrow.assetIssuer || undefined,
+              },
+            });
+            const decimals = asset?.decimals ?? 7;
+            const sellerShare = (totalAmount * dto.sellerPercent) / 100;
+            splitWinnerAmount = Math.floor(
+              sellerShare * Math.pow(10, decimals),
+            ).toString();
+          }
+
+          stellarTxHash =
+            await this.stellarIntegrationService.resolveOnChainDispute(
+              escrowId,
+              winnerPublicKey,
+              arbitratorUser.walletAddress,
+              splitWinnerAmount,
+            );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to resolve dispute on-chain: ${error instanceof Error ? error.message : error}`,
+      );
+      throw new BadRequestException(
+        `On-chain dispute resolution failed: ${error instanceof Error ? error.message : error}`,
+      );
+    }
+
+    await this.escrowRepository.update(escrowId, {
+      status: nextEscrowStatus,
+      ...(stellarTxHash ? { stellarTxHash } : {}),
+    });
 
     dispute.status = DisputeStatus.RESOLVED;
     dispute.resolvedByUserId = arbitratorUserId;

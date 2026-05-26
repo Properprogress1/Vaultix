@@ -35,6 +35,7 @@ import { EscrowLifecycleService } from '../escrow-lifecycle.service';
 import { EscrowFundingService } from '../escrow-funding.service';
 import { EscrowDisputeService } from '../escrow-dispute.service';
 import { EscrowQueryService } from '../escrow-query.service';
+import { StellarService } from '../../../services/stellar.service';
 
 describe('EscrowService', () => {
   let service: EscrowService;
@@ -212,6 +213,14 @@ describe('EscrowService', () => {
         {
           provide: EscrowQueryService,
           useValue: mockQueryService,
+        },
+        {
+          provide: StellarService,
+          useValue: {
+            getAccount: jest.fn().mockResolvedValue({
+              balances: [{ asset_type: 'native', balance: '1000' }],
+            }),
+          },
         },
       ],
     }).compile();
