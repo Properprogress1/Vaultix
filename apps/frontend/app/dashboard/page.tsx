@@ -2,9 +2,9 @@
 
 import { Suspense, useCallback, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import StatusTabs from "@/component/dashboard/StatusTabs";
-import EscrowList from "@/component/dashboard/EscrowList";
-import EscrowFilters from "@/component/dashboard/EscrowFilters";
+import StatusTabs from "@/components/dashboard/StatusTabs";
+import EscrowList from "@/components/dashboard/EscrowList";
+import EscrowFilters from "@/components/dashboard/EscrowFilters";
 import { useEscrows } from "../../hooks/useEscrows";
 import ActivityFeed from "@/components/common/ActivityFeed";
 import Link from "next/link";
@@ -16,16 +16,24 @@ function DashboardContent() {
   const pathname = usePathname();
   const [showActivity, setShowActivity] = useState(false);
 
-  const activeStatuses = searchParams.get("status")?.split(",").filter(Boolean) || [];
+  const activeStatuses =
+    searchParams.get("status")?.split(",").filter(Boolean) || [];
   const searchQuery = searchParams.get("search") || "";
-  const sortBy = (searchParams.get("sort") as "date" | "amount" | "deadline") || "date";
+  const sortBy =
+    (searchParams.get("sort") as "date" | "amount" | "deadline") || "date";
   const sortOrder = (searchParams.get("order") as "asc" | "desc") || "desc";
   const minAmount = searchParams.get("minAmount") || "";
   const maxAmount = searchParams.get("maxAmount") || "";
   const fromDate = searchParams.get("fromDate") || "";
   const toDate = searchParams.get("toDate") || "";
 
-  const hasActiveFilters = activeStatuses.length > 0 || searchQuery || minAmount || maxAmount || fromDate || toDate;
+  const hasActiveFilters =
+    activeStatuses.length > 0 ||
+    searchQuery ||
+    minAmount ||
+    maxAmount ||
+    fromDate ||
+    toDate;
 
   const createQueryString = useCallback(
     (paramsToUpdate: Record<string, string | null>) => {
@@ -36,7 +44,7 @@ function DashboardContent() {
       });
       return params.toString();
     },
-    [searchParams]
+    [searchParams],
   );
 
   const handleToggleStatus = (status: string) => {
@@ -48,18 +56,34 @@ function DashboardContent() {
         ? activeStatuses.filter((s) => s !== status)
         : [...activeStatuses, status];
     }
-    router.push(`${pathname}?${createQueryString({ status: nextStatuses.length ? nextStatuses.join(",") : null })}`);
+    router.push(
+      `${pathname}?${createQueryString({ status: nextStatuses.length ? nextStatuses.join(",") : null })}`,
+    );
   };
 
-  const handleSearch = (query: string) => router.push(`${pathname}?${createQueryString({ search: query })}`);
-  const handleSortChange = (field: "date" | "amount" | "deadline", order: "asc" | "desc") =>
-    router.push(`${pathname}?${createQueryString({ sort: field, order })}`);
+  const handleSearch = (query: string) =>
+    router.push(`${pathname}?${createQueryString({ search: query })}`);
+  const handleSortChange = (
+    field: "date" | "amount" | "deadline",
+    order: "asc" | "desc",
+  ) => router.push(`${pathname}?${createQueryString({ sort: field, order })}`);
   const handleAmountChange = (min: string, max: string) =>
-    router.push(`${pathname}?${createQueryString({ minAmount: min, maxAmount: max })}`);
+    router.push(
+      `${pathname}?${createQueryString({ minAmount: min, maxAmount: max })}`,
+    );
   const handleDateChange = (from: string, to: string) =>
-    router.push(`${pathname}?${createQueryString({ fromDate: from, toDate: to })}`);
+    router.push(
+      `${pathname}?${createQueryString({ fromDate: from, toDate: to })}`,
+    );
 
-  const { data: escrowsData, isLoading, isError, hasNextPage, fetchNextPage, isFetchingNextPage } = useEscrows({
+  const {
+    data: escrowsData,
+    isLoading,
+    isError,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useEscrows({
     status: activeStatuses.join(","),
     search: searchQuery,
     sortBy,
@@ -70,20 +94,40 @@ function DashboardContent() {
     toDate,
   });
 
-  const flatEscrows = escrowsData?.pages.flatMap((page: any) => page.escrows) || [];
+  const flatEscrows =
+    escrowsData?.pages.flatMap((page: any) => page.escrows) || [];
+
+  const validStatuses = [
+    "all",
+    "active",
+    "pending",
+    "completed",
+    "disputed",
+  ] as const;
+  type ValidStatus = (typeof validStatuses)[number];
+
+  const firstStatus = activeStatuses[0];
+  const activeTab: ValidStatus = validStatuses.includes(
+    firstStatus as ValidStatus,
+  )
+    ? (firstStatus as ValidStatus)
+    : "all";
 
   return (
     <>
       {/* Mobile Activity Drawer */}
       {showActivity && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowActivity(false)} />
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowActivity(false)}
+          />
           <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-card text-card-foreground shadow-2xl flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h2 className="font-semibold text-foreground">Activity Feed</h2>
               <button
                 onClick={() => setShowActivity(false)}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground cursor-pointer"
+                className="min-w-11 min-h-11 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground cursor-pointer"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -103,14 +147,14 @@ function DashboardContent() {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={() => setShowActivity(true)}
-                className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center gap-1.5 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted px-3 cursor-pointer"
+                className="lg:hidden min-w-11 min-h-11 flex items-center justify-center gap-1.5 rounded-lg border border-border text-sm text-muted-foreground hover:bg-muted px-3 cursor-pointer"
               >
                 <Activity className="w-4 h-4" />
                 <span className="text-xs font-medium">Activity</span>
               </button>
               <Link
                 href="/escrow/create"
-                className="min-h-[44px] flex items-center gap-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium px-3 hover:bg-blue-700 transition-colors cursor-pointer"
+                className="min-w-11 min-h-11 flex items-center gap-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium px-3 hover:bg-blue-700 transition-colors cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4" />
                 <span className="hidden sm:inline">New Escrow</span>
@@ -118,7 +162,7 @@ function DashboardContent() {
               {hasActiveFilters && (
                 <button
                   onClick={() => router.push(pathname)}
-                  className="min-h-[44px] flex items-center gap-1 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium px-2 cursor-pointer"
+                  className="min-w-11 min-h-11 flex items-center gap-1 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium px-2 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Clear filters</span>
@@ -127,7 +171,10 @@ function DashboardContent() {
             </div>
           </div>
 
-          <StatusTabs activeStatuses={activeStatuses} onToggleStatus={handleToggleStatus} />
+          <StatusTabs
+            activeStatuses={activeStatuses}
+            onToggleStatus={handleToggleStatus}
+          />
           <EscrowFilters
             searchQuery={searchQuery}
             onSearchChange={handleSearch}
@@ -145,7 +192,7 @@ function DashboardContent() {
             escrows={flatEscrows}
             isLoading={isLoading}
             isError={isError}
-            activeTab={activeStatuses[0] || "all"}
+            activeTab={activeTab}
             hasNextPage={hasNextPage}
             fetchNextPage={fetchNextPage}
             isFetchingNextPage={isFetchingNextPage}
@@ -165,14 +212,20 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background text-foreground py-6 sm:py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-6 sm:mb-10">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground sm:text-4xl">
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-foreground">
             Escrow Dashboard
           </h1>
           <p className="mt-2 sm:mt-4 text-base sm:text-lg text-muted-foreground">
             Manage all your escrow agreements in one place
           </p>
         </div>
-        <Suspense fallback={<div className="text-center py-20 text-muted-foreground">Loading Dashboard...</div>}>
+        <Suspense
+          fallback={
+            <div className="text-center py-20 text-muted-foreground">
+              Loading Dashboard...
+            </div>
+          }
+        >
           <DashboardContent />
         </Suspense>
       </div>
