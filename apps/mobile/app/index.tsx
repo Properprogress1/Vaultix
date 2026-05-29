@@ -2,7 +2,7 @@
  * Welcome / Connect Wallet screen
  * Features: wallet connection simulation, animated branding, navigate to tabs on connect
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,10 +13,22 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { consumePendingRedirect, isAuthenticated } from '../services/auth';
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const [connecting, setConnecting] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated()) return;
+
+    const pending = consumePendingRedirect();
+    if (pending?.pathname) {
+      router.replace({ pathname: pending.pathname, params: pending.params });
+    } else {
+      router.replace('/(tabs)/dashboard');
+    }
+  }, [router]);
 
   const handleConnectWallet = async () => {
     setConnecting(true);
@@ -28,7 +40,12 @@ export default function WelcomeScreen() {
       (global as Record<string, unknown>).__authToken = 'simulated-jwt-token';
       (global as Record<string, unknown>).__walletAddress = 'GABCD...XYZ';
 
-      router.replace('/(tabs)/dashboard');
+      const pending = consumePendingRedirect();
+      if (pending?.pathname) {
+        router.replace({ pathname: pending.pathname, params: pending.params });
+      } else {
+        router.replace('/(tabs)/dashboard');
+      }
     } catch {
       Alert.alert('Connection Failed', 'Could not connect to wallet. Please try again.');
     } finally {

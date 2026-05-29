@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { escrowApi } from '../../services/api';
+import { requireAuth } from '../../services/auth';
 import { Escrow, Milestone, Party, EscrowEvent } from '../../types/escrow';
 
 // Simulated current user role – in production this comes from auth context
@@ -125,7 +126,11 @@ export default function EscrowDetailScreen() {
     }
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!id) return;
+    if (!requireAuth(router, { pathname: '/escrow/[id]', params: { id } })) return;
+    load();
+  }, [id, load, router]);
 
   const handleRelease = useCallback((milestoneId: string) => {
     router.push({ pathname: '/escrow/release', params: { escrowId: id, milestoneId } });

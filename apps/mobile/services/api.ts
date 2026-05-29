@@ -69,6 +69,24 @@ export const escrowApi = {
   },
 };
 
+interface InviteValidation {
+  escrowId: string;
+  role: string;
+  sender: string;
+  expiresAt: string;
+}
+
+export const inviteApi = {
+  validateToken: async (token: string): Promise<InviteValidation> => {
+    const { data } = await api.get<InviteValidation>(`/api/invites/${token}`);
+    return data;
+  },
+  acceptInvitation: async (token: string): Promise<InviteValidation> => {
+    const { data } = await api.post<InviteValidation>(`/api/invites/${token}/accept`);
+    return data;
+  },
+};
+
 export const notificationApi = {
   /** Fetch user notifications */
   list: async (): Promise<NotificationsResponse> => {

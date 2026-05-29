@@ -20,6 +20,7 @@ export default function RootLayout() {
 
         {/* Full-screen detail screens */}
         <Stack.Screen name="escrow/[id]" options={{ title: 'Escrow Detail' }} />
+        <Stack.Screen name="invite/[token]" options={{ title: 'Accept Invitation' }} />
         <Stack.Screen name="escrow/create" options={{ title: 'Create Escrow' }} />
         <Stack.Screen name="escrow/release" options={{ title: 'Release Milestone' }} />
       </Stack>

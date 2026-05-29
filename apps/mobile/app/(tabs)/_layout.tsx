@@ -1,7 +1,17 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, Text } from 'react-native';
+import { requireAuth } from '../../services/auth';
 
 export default function TabLayout() {
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    const currentSegment = segments[segments.length - 1] ?? 'dashboard';
+    requireAuth(router, { pathname: `/(tabs)/${currentSegment}` });
+  }, [router, segments]);
+
   return (
     <Tabs
       screenOptions={{
