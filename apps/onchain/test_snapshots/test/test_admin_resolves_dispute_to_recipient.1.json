@@ -734,6 +734,54 @@
             "key": {
               "vec": [
                 {
+                  "symbol": "escver"
+                },
+                {
+                  "u64": 10
+                }
+              ]
+            },
+            "durability": "persistent"
+          }
+        },
+        [
+          {
+            "last_modified_ledger_seq": 0,
+            "data": {
+              "contract_data": {
+                "ext": "v0",
+                "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+                "key": {
+                  "vec": [
+                    {
+                      "symbol": "escver"
+                    },
+                    {
+                      "u64": 10
+                    }
+                  ]
+                },
+                "durability": "persistent",
+                "val": {
+                  "i128": {
+                    "hi": 0,
+                    "lo": 2
+                  }
+                }
+              }
+            },
+            "ext": "v0"
+          },
+          4095
+        ]
+      ],
+      [
+        {
+          "contract_data": {
+            "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+            "key": {
+              "vec": [
+                {
                   "symbol": "recidx"
                 },
                 {
@@ -2153,6 +2201,18 @@
                 },
                 {
                   "key": {
+                    "symbol": "status"
+                  },
+                  "val": {
+                    "vec": [
+                      {
+                        "symbol": "Created"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "timestamp"
                   },
                   "val": {
@@ -2175,6 +2235,17 @@
                     "i128": {
                       "hi": 0,
                       "lo": 10000
+                    }
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "total_released"
+                  },
+                  "val": {
+                    "i128": {
+                      "hi": 0,
+                      "lo": 0
                     }
                   }
                 }
@@ -2562,6 +2633,14 @@
               "map": [
                 {
                   "key": {
+                    "symbol": "deadline"
+                  },
+                  "val": {
+                    "u64": 1706400000
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "depositor"
                   },
                   "val": {
@@ -2582,6 +2661,18 @@
                   },
                   "val": {
                     "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "status"
+                  },
+                  "val": {
+                    "vec": [
+                      {
+                        "symbol": "Active"
+                      }
+                    ]
                   }
                 },
                 {
@@ -2608,6 +2699,17 @@
                     "i128": {
                       "hi": 0,
                       "lo": 10000
+                    }
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "total_released"
+                  },
+                  "val": {
+                    "i128": {
+                      "hi": 0,
+                      "lo": 0
                     }
                   }
                 }
@@ -2694,6 +2796,14 @@
               "map": [
                 {
                   "key": {
+                    "symbol": "deadline"
+                  },
+                  "val": {
+                    "u64": 1706400000
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "depositor"
                   },
                   "val": {
@@ -2726,10 +2836,44 @@
                 },
                 {
                   "key": {
+                    "symbol": "status"
+                  },
+                  "val": {
+                    "vec": [
+                      {
+                        "symbol": "Disputed"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "timestamp"
                   },
                   "val": {
                     "u64": 0
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "total_amount"
+                  },
+                  "val": {
+                    "i128": {
+                      "hi": 0,
+                      "lo": 10000
+                    }
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "total_released"
+                  },
+                  "val": {
+                    "i128": {
+                      "hi": 0,
+                      "lo": 0
+                    }
                   }
                 }
               ]
@@ -2960,6 +3104,14 @@
               "map": [
                 {
                   "key": {
+                    "symbol": "deadline"
+                  },
+                  "val": {
+                    "u64": 1706400000
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "escrow_id"
                   },
                   "val": {
@@ -2999,10 +3151,44 @@
                 },
                 {
                   "key": {
+                    "symbol": "status"
+                  },
+                  "val": {
+                    "vec": [
+                      {
+                        "symbol": "Resolved"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "key": {
                     "symbol": "timestamp"
                   },
                   "val": {
                     "u64": 0
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "total_amount"
+                  },
+                  "val": {
+                    "i128": {
+                      "hi": 0,
+                      "lo": 10000
+                    }
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "total_released"
+                  },
+                  "val": {
+                    "i128": {
+                      "hi": 0,
+                      "lo": 10000
+                    }
                   }
                 },
                 {

@@ -388,11 +388,13 @@ pub enum Error {
     OperatorNotInitialized = 28,
     ArbitratorNotInitialized = 29,
     InvalidMetadataHash = 30,
+    UnsupportedEscrowVersion = 31,
 }
 
 const DEFAULT_FEE_BPS: i128 = 50;
 const BPS_DENOMINATOR: i128 = 10000;
 const MAX_BATCH_SIZE: u32 = 20;
+const ESCROW_ENTRY_STORAGE_VERSION: i128 = 2;
 const EVENT_NAMESPACE: &str = "Vaultix";
 const EVENT_SCHEMA_VERSION: &str = "v1";
 const MAX_PAGE_SIZE: u32 = 100;
@@ -761,6 +763,41 @@ impl VaultixEscrow {
         emit_role_updated(&env, Role::Arbitrator, None, arbitrator, timestamp);
 
         Ok(())
+    }
+
+    /// Test-only helper: set a legacy `Escrow` record and optional escrow fee directly into persistent storage.
+    /// Compiled only for test builds to avoid exposing in production.
+    #[cfg(test)]
+    pub fn test_set_legacy_escrow(
+        env: Env,
+        escrow_id: u64,
+        legacy: Escrow,
+        fee_bps: Option<i128>,
+    ) -> Result<(), Error> {
+        // Write legacy escrow under the legacy key within contract execution context
+        env.storage().persistent().set(&get_storage_key_legacy(escrow_id), &legacy);
+        if let Some(f) = fee_bps {
+            env.storage().persistent().set(&get_escrow_fee_key(escrow_id), &f);
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub fn test_has_escrow_v2(env: Env, escrow_id: u64) -> bool {
+        env.storage().persistent().has(&get_storage_key_v2(escrow_id))
+    }
+
+    #[cfg(test)]
+    pub fn test_has_legacy_escrow(env: Env, escrow_id: u64) -> bool {
+        env.storage().persistent().has(&get_storage_key_legacy(escrow_id))
+    }
+
+    #[cfg(test)]
+    pub fn test_get_escrow_version(env: Env, escrow_id: u64) -> i128 {
+        env.storage()
+            .persistent()
+            .get::<(Symbol, u64), i128>(&get_escrow_version_key(escrow_id))
+            .unwrap_or(0)
     }
 
     /// Configure the threshold amount and required signatures for an escrow
@@ -1773,6 +1810,12 @@ fn get_storage_key_legacy(escrow_id: u64) -> (Symbol, u64) {
     (symbol_short!("escrow"), escrow_id)
 }
 
+/// Generates storage key for escrow version markers.
+/// This companion key is stored alongside the V2 escrow entry for explicit versioning.
+fn get_escrow_version_key(escrow_id: u64) -> (Symbol, u64) {
+    (symbol_short!("escver"), escrow_id)
+}
+
 fn event_topic(env: &Env, event_name: &str) -> (Symbol, Symbol, Symbol) {
     (
         Symbol::new(env, EVENT_NAMESPACE),
@@ -1785,6 +1828,8 @@ fn current_timestamp(env: &Env) -> u64 {
     env.ledger().timestamp()
 }
 
+/// Generates storage key for the current V2 escrow format.
+/// The `esc2` prefix distinguishes current entries from legacy `escrow` storage.
 fn get_storage_key_v2(escrow_id: u64) -> (Symbol, u64) {
     (symbol_short!("esc2"), escrow_id)
 }
@@ -2169,9 +2214,18 @@ fn u32_to_resolution(v: u32) -> Resolution {
     }
 }
 
+fn set_escrow_entry_version(env: &Env, escrow_id: u64, version: i128) {
+    let version_key = get_escrow_version_key(escrow_id);
+    env.storage().persistent().set(&version_key, &version);
+    env.storage()
+        .persistent()
+        .extend_ttl(&version_key, 100, 1_000_000);
+}
+
 fn store_escrow_entry_v2(env: &Env, escrow_id: u64, escrow: &EscrowEntryV2) {
     let key = get_storage_key_v2(escrow_id);
     env.storage().persistent().set(&key, escrow);
+    set_escrow_entry_version(env, escrow_id, ESCROW_ENTRY_STORAGE_VERSION);
     extend_escrow_ttl(env, &key, escrow);
 }
 
@@ -2182,6 +2236,17 @@ fn load_escrow_entry_v2(env: &Env, escrow_id: u64) -> Result<EscrowEntryV2, Erro
         .persistent()
         .get::<(Symbol, u64), EscrowEntryV2>(&v2_key)
     {
+        if let Some(version) = env
+            .storage()
+            .persistent()
+            .get::<(Symbol, u64), i128>(&get_escrow_version_key(escrow_id))
+        {
+            if version > ESCROW_ENTRY_STORAGE_VERSION {
+                return Err(Error::UnsupportedEscrowVersion);
+            }
+        } else {
+            set_escrow_entry_version(env, escrow_id, ESCROW_ENTRY_STORAGE_VERSION);
+        }
         extend_escrow_ttl(env, &v2_key, &v2);
         return Ok(v2);
     }
@@ -2212,7 +2277,7 @@ fn load_escrow_entry_v2(env: &Env, escrow_id: u64) -> Result<EscrowEntryV2, Erro
         required_signatures: legacy.required_signatures,
         collected_signatures: legacy.collected_signatures,
         fee_override_bps,
-        metadata_hash: BytesN::from_array(env, &[0u8; 32]),
+        metadata_hash: legacy.metadata_hash,
     };
 
     env.storage().persistent().remove(&legacy_key);
