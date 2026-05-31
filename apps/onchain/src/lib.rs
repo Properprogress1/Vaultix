@@ -775,21 +775,29 @@ impl VaultixEscrow {
         fee_bps: Option<i128>,
     ) -> Result<(), Error> {
         // Write legacy escrow under the legacy key within contract execution context
-        env.storage().persistent().set(&get_storage_key_legacy(escrow_id), &legacy);
+        env.storage()
+            .persistent()
+            .set(&get_storage_key_legacy(escrow_id), &legacy);
         if let Some(f) = fee_bps {
-            env.storage().persistent().set(&get_escrow_fee_key(escrow_id), &f);
+            env.storage()
+                .persistent()
+                .set(&get_escrow_fee_key(escrow_id), &f);
         }
         Ok(())
     }
 
     #[cfg(test)]
     pub fn test_has_escrow_v2(env: Env, escrow_id: u64) -> bool {
-        env.storage().persistent().has(&get_storage_key_v2(escrow_id))
+        env.storage()
+            .persistent()
+            .has(&get_storage_key_v2(escrow_id))
     }
 
     #[cfg(test)]
     pub fn test_has_legacy_escrow(env: Env, escrow_id: u64) -> bool {
-        env.storage().persistent().has(&get_storage_key_legacy(escrow_id))
+        env.storage()
+            .persistent()
+            .has(&get_storage_key_legacy(escrow_id))
     }
 
     #[cfg(test)]
