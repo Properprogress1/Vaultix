@@ -38,7 +38,10 @@
     "@typescript-eslint/parser": "^7.0.0"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!.*(react-native|@react-native|expo|@expo|@stellar|@react-navigation|react-navigation))"
+    ]
   },
   "private": true
 }
