@@ -1713,6 +1713,97 @@ fn test_zero_amount_milestone_rejected() {
 }
 
 #[test]
+fn test_legacy_escrow_migrates_to_v2_and_preserves_metadata() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let contract_id = env.register_contract(None, VaultixEscrow);
+    let client = VaultixEscrowClient::new(&env, &contract_id);
+
+    let treasury = Address::generate(&env);
+    client.initialize(&treasury, &Some(50));
+
+    let depositor = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    let token_address = Address::generate(&env);
+    let escrow_id = 42u64;
+
+    let legacy_escrow = Escrow {
+        depositor: depositor.clone(),
+        recipient: recipient.clone(),
+        token_address: token_address.clone(),
+        total_amount: 500,
+        total_released: 0,
+        milestones: Vec::new(&env),
+        status: EscrowStatus::Created,
+        deadline: 1706400000u64,
+        resolution: Resolution::None,
+        threshold_amount: 10000,
+        required_signatures: 1,
+        collected_signatures: Vec::new(&env),
+        metadata_hash: valid_metadata_hash(&env),
+    };
+
+    // Use test helper to write legacy storage under the contract context
+    client.test_set_legacy_escrow(&escrow_id, &legacy_escrow, &Some(75i128));
+
+    let loaded = client.get_escrow(&escrow_id);
+
+    assert_eq!(loaded.metadata_hash, valid_metadata_hash(&env));
+    assert_eq!(loaded.total_amount, 500);
+    assert_eq!(loaded.status, EscrowStatus::Created);
+    assert_eq!(loaded.resolution, Resolution::None);
+
+    assert!(client.test_has_escrow_v2(&escrow_id));
+    assert!(!client.test_has_legacy_escrow(&escrow_id));
+    assert_eq!(
+        client.test_get_escrow_version(&escrow_id),
+        ESCROW_ENTRY_STORAGE_VERSION
+    );
+}
+
+#[test]
+fn test_milestone_sum_overflow_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let contract_id = env.register_contract(None, VaultixEscrow);
+    let client = VaultixEscrowClient::new(&env, &contract_id);
+
+    let depositor = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    let admin = Address::generate(&env);
+    let escrow_id = 13u64;
+
+    let (_token_client, token_admin, token_address) = create_token_contract(&env, &admin);
+    token_admin.mint(&depositor, &10000);
+
+    let milestones = vec![
+        &env,
+        Milestone {
+            amount: i128::MAX,
+            status: MilestoneStatus::Pending,
+            description: symbol_short!("Test"),
+        },
+        Milestone {
+            amount: 1,
+            status: MilestoneStatus::Pending,
+            description: symbol_short!("Overflow"),
+        },
+    ];
+
+    let result = client.try_create_escrow(
+        &escrow_id,
+        &depositor,
+        &recipient,
+        &token_address,
+        &milestones,
+        &1706400000u64,
+        &valid_metadata_hash(&env),
+    );
+
+    assert_eq!(result, Err(Ok(Error::InvalidMilestoneAmount)));
+}
+
+#[test]
 fn test_negative_amount_milestone_rejected() {
     let env = Env::default();
     env.mock_all_auths();
