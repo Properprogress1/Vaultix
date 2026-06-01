@@ -35,6 +35,7 @@ describe('EscrowSchedulerService', () => {
           provide: EscrowService,
           useValue: {
             expireBySystem: jest.fn(),
+            queueExpirationWarningNotifications: jest.fn(),
           },
         },
       ],
@@ -86,6 +87,9 @@ describe('EscrowSchedulerService', () => {
 
       expect(escrowRepo.save).toHaveBeenCalled();
       expect(eventRepo.save).toHaveBeenCalled();
+      expect(
+        escrowService.queueExpirationWarningNotifications,
+      ).toHaveBeenCalled();
     });
   });
 

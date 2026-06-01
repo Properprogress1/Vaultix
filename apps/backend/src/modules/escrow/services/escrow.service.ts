@@ -14,7 +14,9 @@ import {
   SelectQueryBuilder,
   MoreThan,
   LessThan,
+  In,
 } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Escrow, EscrowStatus } from '../entities/escrow.entity';
 import { Party, PartyRole } from '../entities/party.entity';
 import { Condition } from '../entities/condition.entity';
@@ -55,6 +57,14 @@ import { EscrowFundingService } from '../escrow-funding.service';
 import { EscrowDisputeService } from '../escrow-dispute.service';
 import { EscrowQueryService } from '../escrow-query.service';
 import { StellarService } from '../../../services/stellar.service';
+import { NotificationService } from '../../../notifications/notifications.service';
+import { NotificationEventType } from '../../../notifications/enums/notification-event.enum';
+
+type NotificationRecipient = {
+  userId: string;
+  role: PartyRole | 'admin';
+  user?: User & { email?: string | null };
+};
 
 @Injectable()
 export class EscrowService {
@@ -84,6 +94,8 @@ export class EscrowService {
     private readonly dispute: EscrowDisputeService,
     private readonly query: EscrowQueryService,
     private readonly stellarService: StellarService,
+    private readonly notificationService: NotificationService,
+    private readonly configService: ConfigService,
   ) {}
 
   async create(
@@ -266,7 +278,21 @@ export class EscrowService {
       escrowId: savedEscrow.id,
     });
 
-    return this.findOne(savedEscrow.id);
+    const createdEscrow = await this.findOne(savedEscrow.id);
+    await this.notifyEscrowParticipants(
+      createdEscrow,
+      NotificationEventType.ESCROW_CREATED,
+    );
+    await this.notifyEscrowParticipants(
+      createdEscrow,
+      NotificationEventType.PARTY_INVITED,
+      {
+        roles: [PartyRole.BUYER, PartyRole.SELLER, PartyRole.ARBITRATOR],
+        excludeUserIds: [creatorId],
+      },
+    );
+
+    return createdEscrow;
   }
 
   async findOverview(
@@ -576,7 +602,14 @@ export class EscrowService {
       escrowId: id,
     });
 
-    return this.findOne(id);
+    const cancelledEscrow = await this.findOne(id);
+    await this.notifyEscrowParticipants(
+      cancelledEscrow,
+      NotificationEventType.ESCROW_CANCELLED,
+      { extraPayload: { reason: dto.reason, previousStatus: escrow.status } },
+    );
+
+    return cancelledEscrow;
   }
 
   async expire(
@@ -668,7 +701,17 @@ export class EscrowService {
       stellarTxHash,
     });
 
-    return this.findOne(id);
+    const fundedEscrow = await this.findOne(id);
+    await this.notifyEscrowParticipants(
+      fundedEscrow,
+      NotificationEventType.ESCROW_FUNDED,
+      {
+        roles: [PartyRole.SELLER, PartyRole.ARBITRATOR],
+        extraPayload: { stellarTxHash, fundedAt: fundedAt.toISOString() },
+      },
+    );
+
+    return fundedEscrow;
   }
 
   async isUserPartyToEscrow(
@@ -759,6 +802,17 @@ export class EscrowService {
       txHash,
     });
 
+    await this.notifyEscrowParticipants(
+      escrow,
+      NotificationEventType.ESCROW_COMPLETED,
+      { extraPayload: { txHash } },
+    );
+    await this.notifyEscrowParticipants(
+      escrow,
+      NotificationEventType.MILESTONE_RELEASED,
+      { extraPayload: { txHash } },
+    );
+
     return escrow;
   }
 
@@ -840,6 +894,19 @@ export class EscrowService {
       conditionId,
       fulfilledBy: userId,
     });
+
+    await this.notifyEscrowParticipants(
+      escrow,
+      NotificationEventType.CONDITION_FULFILLED,
+      {
+        roles: [PartyRole.BUYER],
+        extraPayload: {
+          conditionId,
+          condition: condition.description,
+          fulfilledBy: userId,
+        },
+      },
+    );
 
     return condition;
   }
@@ -938,6 +1005,20 @@ export class EscrowService {
       confirmedBy: userId,
       allConditionsMet,
     });
+
+    await this.notifyEscrowParticipants(
+      escrow,
+      NotificationEventType.CONDITION_CONFIRMED,
+      {
+        roles: [PartyRole.SELLER],
+        extraPayload: {
+          conditionId,
+          condition: condition.description,
+          confirmedBy: userId,
+          allConditionsMet,
+        },
+      },
+    );
 
     return condition;
   }
@@ -1142,6 +1223,19 @@ export class EscrowService {
       disputeId: savedDispute.id,
     });
 
+    await this.notifyEscrowParticipants(
+      escrow,
+      NotificationEventType.DISPUTE_RAISED,
+      {
+        includeAdmins: true,
+        extraPayload: {
+          disputeId: savedDispute.id,
+          reason: dto.reason,
+          filedBy: userId,
+        },
+      },
+    );
+
     return this.disputeRepository.findOne({
       where: { id: savedDispute.id },
       relations: ['filedBy'],
@@ -1315,6 +1409,21 @@ export class EscrowService {
       disputeId: resolved.id,
       outcome: dto.outcome,
     });
+
+    const resolvedEscrow = await this.findOne(escrowId);
+    await this.notifyEscrowParticipants(
+      resolvedEscrow,
+      NotificationEventType.DISPUTE_RESOLVED,
+      {
+        extraPayload: {
+          disputeId: resolved.id,
+          outcome: dto.outcome,
+          sellerPercent: dto.sellerPercent,
+          buyerPercent: dto.buyerPercent,
+          nextEscrowStatus,
+        },
+      },
+    );
 
     return this.disputeRepository.findOne({
       where: { id: resolved.id },
@@ -1529,7 +1638,35 @@ export class EscrowService {
       reason: options.webhookReason,
     });
 
-    return this.findOne(escrow.id);
+    const expiredEscrow = await this.findOne(escrow.id);
+    await this.notifyEscrowParticipants(
+      expiredEscrow,
+      NotificationEventType.ESCROW_EXPIRED,
+      {
+        extraPayload: {
+          reason: options.reason,
+          previousStatus: escrow.status,
+          expiredAt: new Date().toISOString(),
+        },
+      },
+    );
+
+    return expiredEscrow;
+  }
+
+  async queueExpirationWarningNotifications(escrow: Escrow): Promise<void> {
+    await this.notifyEscrowParticipants(
+      escrow,
+      NotificationEventType.EXPIRATION_WARNING,
+      {
+        extraPayload: {
+          expiresAt: escrow.expiresAt?.toISOString(),
+          hoursUntilExpiry: escrow.expiresAt
+            ? this.getHoursUntilExpiry(escrow.expiresAt)
+            : undefined,
+        },
+      },
+    );
   }
 
   async uploadEvidence(
@@ -1581,5 +1718,148 @@ export class EscrowService {
     }
 
     return 'Unknown error';
+  }
+
+  private async notifyEscrowParticipants(
+    escrow: Escrow,
+    eventType: NotificationEventType,
+    options: {
+      roles?: PartyRole[];
+      excludeUserIds?: string[];
+      includeAdmins?: boolean;
+      extraPayload?: Record<string, unknown>;
+    } = {},
+  ): Promise<void> {
+    const recipients = await this.getNotificationRecipients(escrow, options);
+
+    await Promise.all(
+      recipients.map(async (recipient) => {
+        try {
+          await this.notificationService.handleEscrowEvent(
+            recipient.userId,
+            eventType,
+            this.buildNotificationPayload(
+              escrow,
+              recipient,
+              options.extraPayload,
+            ),
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to queue ${eventType} notification for user ${recipient.userId} on escrow ${escrow.id}`,
+            error instanceof Error ? error.stack : String(error),
+          );
+        }
+      }),
+    );
+  }
+
+  private async getNotificationRecipients(
+    escrow: Escrow,
+    options: {
+      roles?: PartyRole[];
+      excludeUserIds?: string[];
+      includeAdmins?: boolean;
+    },
+  ): Promise<NotificationRecipient[]> {
+    const excluded = new Set(options.excludeUserIds ?? []);
+    const recipients = new Map<string, NotificationRecipient>();
+    const roles = options.roles ? new Set(options.roles) : null;
+
+    const addRecipient = (
+      userId: string,
+      role: NotificationRecipient['role'],
+    ) => {
+      if (!userId || excluded.has(userId) || recipients.has(userId)) return;
+      recipients.set(userId, { userId, role });
+    };
+
+    if (!roles || roles.has(PartyRole.BUYER)) {
+      addRecipient(escrow.creatorId, PartyRole.BUYER);
+    }
+
+    for (const party of escrow.parties ?? []) {
+      if (roles && !roles.has(party.role)) continue;
+      addRecipient(party.userId, party.role);
+    }
+
+    if (options.includeAdmins) {
+      const admins = await this.userRepository.find({
+        where: { role: In([UserRole.ADMIN, UserRole.SUPER_ADMIN]) },
+      });
+      for (const admin of admins) {
+        if (excluded.has(admin.id) || recipients.has(admin.id)) continue;
+        recipients.set(admin.id, {
+          userId: admin.id,
+          role: 'admin',
+          user: admin,
+        });
+      }
+    }
+
+    const userIdsWithoutDetails = [...recipients.values()]
+      .filter((recipient) => !recipient.user)
+      .map((recipient) => recipient.userId);
+
+    if (userIdsWithoutDetails.length > 0) {
+      const users = await this.userRepository.find({
+        where: { id: In(userIdsWithoutDetails) },
+      });
+      for (const user of users) {
+        const recipient = recipients.get(user.id);
+        if (recipient) {
+          recipient.user = user;
+        }
+      }
+    }
+
+    return [...recipients.values()];
+  }
+
+  private buildNotificationPayload(
+    escrow: Escrow,
+    recipient: NotificationRecipient,
+    extraPayload: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    const email = this.getUserEmail(recipient.user);
+
+    return {
+      escrowId: escrow.id,
+      escrowTitle: escrow.title,
+      amount: escrow.amount?.toString(),
+      asset: escrow.assetCode ?? 'XLM',
+      assetIssuer: escrow.assetIssuer,
+      status: escrow.status,
+      recipientRole: recipient.role,
+      walletAddress: recipient.user?.walletAddress,
+      actionUrl: this.getEscrowActionUrl(escrow.id),
+      ...(email
+        ? {
+            email,
+            userEmail: email,
+            recipientEmail: email,
+          }
+        : {}),
+      ...extraPayload,
+    };
+  }
+
+  private getEscrowActionUrl(escrowId: string): string {
+    const frontendUrl = this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3001',
+    );
+    return `${frontendUrl.replace(/\/+$/, '')}/escrow/${escrowId}`;
+  }
+
+  private getUserEmail(user?: User & { email?: string | null }): string | null {
+    if (!user?.email) return null;
+    const email = user.email.trim();
+    return email.length > 0 ? email : null;
+  }
+
+  private getHoursUntilExpiry(expiresAt: Date): number {
+    const diffMs = expiresAt.getTime() - Date.now();
+    return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60)));
   }
 }
