@@ -22,6 +22,7 @@ import { EscrowLifecycleService } from './escrow-lifecycle.service';
 import { EscrowFundingService } from './escrow-funding.service';
 import { EscrowDisputeService } from './escrow-dispute.service';
 import { EscrowQueryService } from './escrow-query.service';
+import { NotificationsModule } from '../../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { EscrowQueryService } from './escrow-query.service';
     AuthModule,
     WebhookModule,
     IpfsModule,
+    NotificationsModule,
   ],
   controllers: [EscrowController, EscrowSchedulerController, EventsController],
   providers: [
