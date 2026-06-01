@@ -89,7 +89,7 @@ pub struct Escrow {
     pub threshold_amount: i128, // Threshold amount for multi-sig requirement
     pub required_signatures: u32, // Number of signatures required for release
     pub collected_signatures: Vec<Address>, // Addresses that have signed for release
-    pub metadata_hash: BytesN<32>, // IPFS metadata hash for the escrow agreement
+    pub metadata_hash: BytesN<32>, // Raw SHA-256 digest bytes for escrow metadata
 }
 
 #[contracttype]
