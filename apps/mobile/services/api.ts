@@ -6,7 +6,11 @@ import {
   CreateEscrowPayload,
   ReleaseMilestonePayload,
 } from '../types/escrow';
+<<<<<<< HEAD
 import { withRetry } from '../utils/retry';
+=======
+import { Notification, NotificationsResponse } from '../types/notification';
+>>>>>>> d431ba40ce53cfcf510d9b702e2540ee53b1f9f1
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
@@ -72,5 +76,42 @@ export const escrowApi = {
       );
       return data;
     }, { maxRetries: 2, initialDelayMs: 2000 });
+  },
+};
+
+interface InviteValidation {
+  escrowId: string;
+  role: string;
+  sender: string;
+  expiresAt: string;
+}
+
+export const inviteApi = {
+  validateToken: async (token: string): Promise<InviteValidation> => {
+    const { data } = await api.get<InviteValidation>(`/api/invites/${token}`);
+    return data;
+  },
+  acceptInvitation: async (token: string): Promise<InviteValidation> => {
+    const { data } = await api.post<InviteValidation>(`/api/invites/${token}/accept`);
+    return data;
+  },
+};
+
+export const notificationApi = {
+  /** Fetch user notifications */
+  list: async (): Promise<NotificationsResponse> => {
+    const { data } = await api.get<NotificationsResponse>('/api/notifications');
+    return data;
+  },
+
+  /** Get unread notification count */
+  getUnreadCount: async (): Promise<number> => {
+    const { data } = await api.get<number>('/api/notifications/unread-count');
+    return data;
+  },
+
+  /** Mark notification(s) as read */
+  markAsRead: async (notificationId?: string): Promise<void> => {
+    await api.post('/api/notifications/mark-as-read', { notificationId });
   },
 };

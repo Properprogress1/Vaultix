@@ -12,12 +12,20 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { escrowApi } from '../../services/api';
+import { requireAuth } from '../../services/auth';
 import { Escrow, Milestone, Party, EscrowEvent } from '../../types/escrow';
+<<<<<<< HEAD
 import { OfflineBanner } from '../../components/OfflineBanner';
 import { CopyButton } from '../../components/CopyButton';
 import { ShareButton, buildEscrowShareUrl } from '../../components/ShareButton';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { toFriendlyError, isOfflineError } from '../../utils/errors';
+=======
+import { useDisputes } from '../../hooks/useDisputes';
+import { RaiseDisputeModal } from '../../components/RaiseDisputeModal';
+import { DisputeDetailsCard } from '../../components/DisputeDetailsCard';
+import { ResolutionSummary } from '../../components/ResolutionSummary';
+>>>>>>> d431ba40ce53cfcf510d9b702e2540ee53b1f9f1
 
 // Simulated current user role – in production this comes from auth context
 const CURRENT_USER_ROLE: 'depositor' | 'recipient' | 'arbitrator' = 'depositor';
@@ -94,13 +102,38 @@ function TimelineItem({ event }: { event: EscrowEvent }) {
   );
 }
 
+function DetailSkeleton() {
+  return (
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.skeletonHeader} />
+        <View style={styles.skeletonLine} />
+        <View style={[styles.skeletonLine, { width: '60%' }]} />
+        <View style={styles.skeletonRow}>
+          <View style={styles.skeletonBox} />
+          <View style={styles.skeletonBox} />
+        </View>
+        <View style={styles.skeletonSection} />
+        <View style={styles.skeletonCard} />
+        <View style={styles.skeletonCard} />
+      </View>
+    </View>
+  );
+}
+
 export default function EscrowDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [escrow, setEscrow] = useState<Escrow | null>(null);
   const [loading, setLoading] = useState(true);
+<<<<<<< HEAD
   const [error, setError] = useState<{ title: string; message: string } | null>(null);
   const { isOffline, markOffline, markOnline } = useNetworkStatus();
+=======
+  const [error, setError] = useState<string | null>(null);
+  const [isDisputeModalVisible, setDisputeModalVisible] = useState(false);
+  const { dispute, raiseDispute, hasActiveDispute, isSubmitting } = useDisputes();
+>>>>>>> d431ba40ce53cfcf510d9b702e2540ee53b1f9f1
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -118,14 +151,18 @@ export default function EscrowDetailScreen() {
     }
   }, [id, markOnline, markOffline]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!id) return;
+    if (!requireAuth(router, { pathname: '/escrow/[id]', params: { id } })) return;
+    load();
+  }, [id, load, router]);
 
   const handleRelease = useCallback((milestoneId: string) => {
     router.push({ pathname: '/escrow/release', params: { escrowId: id, milestoneId } });
   }, [id, router]);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#6c63ff" /></View>;
+    return <DetailSkeleton />;
   }
   if (error || !escrow) {
     return (
@@ -147,7 +184,8 @@ export default function EscrowDetailScreen() {
   // Role-gated: only depositor can release milestones when escrow is funded/confirmed
   const canReleaseMilestones =
     CURRENT_USER_ROLE === 'depositor' &&
-    ['funded', 'confirmed'].includes(escrow.status);
+    ['funded', 'confirmed'].includes(escrow.status) &&
+    !hasActiveDispute;
 
   return (
     <View style={styles.root}>
@@ -179,6 +217,13 @@ export default function EscrowDetailScreen() {
           <Text style={styles.metaValue}>{new Date(escrow.deadline).toLocaleDateString()}</Text>
         </View>
       </View>
+
+      {dispute && (
+        <Section title="Dispute Information">
+          <DisputeDetailsCard status={dispute.status} reason={dispute.reason} />
+          <ResolutionSummary dispute={dispute} />
+        </Section>
+      )}
 
       {/* Milestones */}
       {escrow.milestones && escrow.milestones.length > 0 && (
@@ -220,8 +265,11 @@ export default function EscrowDetailScreen() {
             <Text style={styles.actionBtnText}>Fund Escrow</Text>
           </TouchableOpacity>
         )}
-        {['funded', 'confirmed'].includes(escrow.status) && CURRENT_USER_ROLE === 'depositor' && (
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#ef476f22', borderWidth: 1, borderColor: '#ef476f' }]}>
+        {['funded', 'confirmed'].includes(escrow.status) && CURRENT_USER_ROLE === 'depositor' && !hasActiveDispute && (
+          <TouchableOpacity 
+            style={[styles.actionBtn, { backgroundColor: '#ef476f22', borderWidth: 1, borderColor: '#ef476f' }]}
+            onPress={() => setDisputeModalVisible(true)}
+          >
             <Text style={[styles.actionBtnText, { color: '#ef476f' }]}>Raise Dispute</Text>
           </TouchableOpacity>
         )}
@@ -229,8 +277,24 @@ export default function EscrowDetailScreen() {
           <Text style={styles.noActions}>No actions available for this status.</Text>
         )}
       </Section>
+<<<<<<< HEAD
       </ScrollView>
     </View>
+=======
+
+      <RaiseDisputeModal
+        visible={isDisputeModalVisible}
+        onClose={() => setDisputeModalVisible(false)}
+        onSubmit={async (reason, description) => {
+          const res = await raiseDispute(escrow.id, reason, description);
+          if (res.success) {
+            setDisputeModalVisible(false);
+          }
+        }}
+        isSubmitting={isSubmitting}
+      />
+    </ScrollView>
+>>>>>>> d431ba40ce53cfcf510d9b702e2540ee53b1f9f1
   );
 }
 
@@ -279,4 +343,11 @@ const styles = StyleSheet.create({
   errorMessage: { color: '#aaa', fontSize: 13, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
   retryBtn: { backgroundColor: '#6c63ff', borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
   retryText: { color: '#fff', fontWeight: '600' },
+  // Skeleton styles
+  skeletonHeader: { height: 24, backgroundColor: '#2d2d44', borderRadius: 6, marginBottom: 12, width: '70%' },
+  skeletonLine: { height: 14, backgroundColor: '#2d2d44', borderRadius: 4, marginBottom: 8, width: '90%' },
+  skeletonRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  skeletonBox: { flex: 1, height: 60, backgroundColor: '#2d2d44', borderRadius: 10 },
+  skeletonSection: { height: 14, backgroundColor: '#2d2d44', borderRadius: 4, marginTop: 20, marginBottom: 12, width: '40%' },
+  skeletonCard: { height: 48, backgroundColor: '#2d2d44', borderRadius: 10, marginBottom: 8 },
 });

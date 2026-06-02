@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { escrowApi } from '../../services/api';
+import { requireAuth } from '../../services/auth';
 import { TxState, TxStatus } from '../../types/escrow';
 import { toFriendlyError } from '../../utils/errors';
 
@@ -97,7 +98,21 @@ export default function ReleaseMilestoneScreen() {
     }
   }, [stopPolling]);
 
+  useEffect(() => {
+    if (!escrowId || !milestoneId) return;
+    requireAuth(router, { pathname: '/escrow/release', params: { escrowId, milestoneId } });
+  }, [escrowId, milestoneId, router]);
+
   useEffect(() => () => stopPolling(), [stopPolling]);
+
+  if (!escrowId || !milestoneId) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Invalid Release Link</Text>
+        <Text style={styles.subtitle}>This milestone release link is missing required information.</Text>
+      </View>
+    );
+  }
 
   const handleRelease = useCallback(async () => {
     if (!escrowId || !milestoneId) return;

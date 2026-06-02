@@ -33,11 +33,13 @@ export default function TermsStep() {
             </div>
           </div>
 
-          {/* Asset Selector (Placeholder for now) */}
-          <Select label="Asset" disabled {...register("asset")}>
-            <option value="XLM">Stellar Lumens (XLM)</option>
-            {/* Future: Add USDC, etc. */}
-          </Select>
+          <Select
+            label="Asset"
+            helperText="XLM is currently the only supported escrow asset."
+            disabled
+            options={[{ value: 'XLM', label: 'Stellar Lumens (XLM)' }]}
+            {...register('asset')}
+          />
         </div>
 
         {/* Deadline Field */}

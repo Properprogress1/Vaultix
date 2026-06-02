@@ -1,9 +1,16 @@
 /**
+<<<<<<< HEAD
  * Unit tests for mobile API services + reliability utilities
  */
 import { escrowApi } from '../services/api';
 import { isRetryableError, withRetry } from '../utils/retry';
 import { toFriendlyError, isOfflineError } from '../utils/errors';
+=======
+ * Basic unit tests for mobile API services
+ */
+import { escrowApi } from '../services/api';
+import { notificationApi } from '../services/api';
+>>>>>>> d431ba40ce53cfcf510d9b702e2540ee53b1f9f1
 
 // Mock axios
 jest.mock('axios', () => ({
@@ -24,6 +31,7 @@ describe('escrowApi', () => {
   });
 });
 
+<<<<<<< HEAD
 describe('isRetryableError', () => {
   it('retries on network errors', () => {
     expect(isRetryableError({ code: 'ECONNABORTED' })).toBe(true);
@@ -137,6 +145,13 @@ describe('toFriendlyError', () => {
   it('prefers server message when available', () => {
     const result = toFriendlyError({ response: { status: 400, data: { message: 'Custom server error' } } });
     expect(result.message).toBe('Custom server error');
+=======
+describe('notificationApi', () => {
+  it('exports list, getUnreadCount, markAsRead', () => {
+    expect(typeof notificationApi.list).toBe('function');
+    expect(typeof notificationApi.getUnreadCount).toBe('function');
+    expect(typeof notificationApi.markAsRead).toBe('function');
+>>>>>>> d431ba40ce53cfcf510d9b702e2540ee53b1f9f1
   });
 });
 

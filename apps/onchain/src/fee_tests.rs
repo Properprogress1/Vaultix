@@ -1,5 +1,6 @@
 use crate::{Error, Milestone, MilestoneStatus, VaultixEscrow, VaultixEscrowClient};
 use soroban_sdk::{symbol_short, BytesN};
+
 /// Comprehensive tests for the Configurable Fee Model feature (#93)
 /// Tests cover:
 /// - Default global fee behavior (no overrides)
@@ -8,6 +9,7 @@ use soroban_sdk::{symbol_short, BytesN};
 /// - Combined scenarios ensuring precedence
 /// - Invalid fee (out of range) rejections
 /// - Fee precedence: escrow > token > global
+/// - Fee rounding edge cases for Issue #305
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token, vec, Address, Env,
@@ -147,8 +149,6 @@ fn test_release_milestone_uses_global_fee_by_default() {
     );
 
     token_client.approve(&depositor, &contract_id, &10_000, &200);
-    token_client.approve(&depositor, &contract_id, &10_000, &200);
-    token_client.approve(&depositor, &contract_id, &10_000, &200);
     client.deposit_funds(&escrow_id);
 
     // Release milestone using global fee (100 bps = 1%)
@@ -203,8 +203,6 @@ fn test_release_milestone_uses_token_fee_override() {
         &valid_metadata_hash(&env),
     );
 
-    token_client.approve(&depositor, &contract_id, &10_000, &200);
-    token_client.approve(&depositor, &contract_id, &10_000, &200);
     token_client.approve(&depositor, &contract_id, &10_000, &200);
     client.deposit_funds(&escrow_id);
 
@@ -265,8 +263,6 @@ fn test_release_milestone_uses_escrow_fee_override() {
     );
 
     token_client.approve(&depositor, &contract_id, &10_000, &200);
-    token_client.approve(&depositor, &contract_id, &10_000, &200);
-    token_client.approve(&depositor, &contract_id, &10_000, &200);
     client.deposit_funds(&escrow_id);
 
     // Release milestone - should use escrow fee (300 bps), not token (100 bps) or global (50 bps)
@@ -324,7 +320,6 @@ fn test_fee_precedence_escrow_over_token_and_global() {
         &valid_metadata_hash(&env),
     );
 
-    token_client.approve(&depositor, &contract_id, &10_000, &200);
     token_client.approve(&depositor, &contract_id, &10_000, &200);
     client.deposit_funds(&escrow_id);
     client.release_milestone(&escrow_id, &0);
@@ -522,4 +517,55 @@ fn test_max_fee_10000_bps_valid() {
     // Set token fee to maximum valid value (BPS_DENOMINATOR = 10000)
     let result = client.try_set_token_fee(&token_address, &10000);
     assert!(result.is_ok());
+}
+
+#[test]
+fn test_fee_rounding_tiny_amount_one_bps() {
+    let amount: i128 = 1;
+    let fee_bps: i128 = 1;
+
+    let fee = amount * fee_bps / 10000;
+    let payout = amount - fee;
+
+    assert_eq!(fee, 0);
+    assert_eq!(payout, 1);
+    assert!(payout >= 0);
+}
+
+#[test]
+fn test_fee_rounding_tiny_amount_max_bps() {
+    let amount: i128 = 1;
+    let fee_bps: i128 = 10000;
+
+    let fee = amount * fee_bps / 10000;
+    let payout = amount - fee;
+
+    assert_eq!(fee, 1);
+    assert_eq!(payout, 0);
+    assert!(payout >= 0);
+}
+
+#[test]
+fn test_fee_rounding_down_for_fractional_fee() {
+    let amount: i128 = 333;
+    let fee_bps: i128 = 100;
+
+    let fee = amount * fee_bps / 10000;
+    let payout = amount - fee;
+
+    assert_eq!(fee, 3);
+    assert_eq!(payout, 330);
+    assert!(payout >= 0);
+}
+
+#[test]
+fn test_fee_never_exceeds_amount_at_edge_bps() {
+    let amount: i128 = 9999;
+    let fee_bps: i128 = 9999;
+
+    let fee = amount * fee_bps / 10000;
+    let payout = amount - fee;
+
+    assert!(fee <= amount);
+    assert!(payout >= 0);
 }

@@ -3,7 +3,7 @@
  * Steps: 1) Parties  2) Milestones  3) Deadline  4) Review & Submit
  * Validates: milestone totals == total amount, 1–10 milestones, deadline in future
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { escrowApi } from '../../services/api';
+<<<<<<< HEAD
 import { toFriendlyError } from '../../utils/errors';
+=======
+import { requireAuth } from '../../services/auth';
+>>>>>>> d431ba40ce53cfcf510d9b702e2540ee53b1f9f1
 
 const MAX_MILESTONES = 10;
 const MIN_MILESTONES = 1;
@@ -88,6 +92,10 @@ export default function CreateEscrowScreen() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    requireAuth(router, { pathname: '/escrow/create' });
+  }, [router]);
 
   const update = (key: keyof FormState, value: FormState[keyof FormState]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
