@@ -105,13 +105,17 @@ export class EscrowService {
         where: { id: partyDto.userId },
       });
       this.notificationService
-        .handleEscrowEvent(partyDto.userId, NotificationEventType.PARTY_INVITED, {
-          escrowId: savedEscrow.id,
-          escrowTitle: savedEscrow.title,
-          role: partyDto.role,
-          invitedBy: creatorId,
-          email: invitedUser?.email ?? undefined,
-        })
+        .handleEscrowEvent(
+          partyDto.userId,
+          NotificationEventType.PARTY_INVITED,
+          {
+            escrowId: savedEscrow.id,
+            escrowTitle: savedEscrow.title,
+            role: partyDto.role,
+            invitedBy: creatorId,
+            email: invitedUser?.email ?? undefined,
+          },
+        )
         .catch(() => undefined);
     }
 
@@ -1206,7 +1210,9 @@ export class EscrowService {
 
     if (!party) throw new NotFoundException('Party invitation not found');
     if (party.userId !== userId)
-      throw new ForbiddenException('You can only respond to your own invitation');
+      throw new ForbiddenException(
+        'You can only respond to your own invitation',
+      );
     if (party.status !== PartyStatus.PENDING)
       throw new BadRequestException(`Invitation already ${party.status}`);
 
@@ -1214,19 +1220,31 @@ export class EscrowService {
     party.respondedAt = new Date();
     await this.partyRepository.save(party);
 
-    await this.logEvent(escrowId, EscrowEventType.PARTY_ACCEPTED, userId, { partyId }, ipAddress);
+    await this.logEvent(
+      escrowId,
+      EscrowEventType.PARTY_ACCEPTED,
+      userId,
+      { partyId },
+      ipAddress,
+    );
 
     const escrow = party.escrow;
     if (escrow?.creatorId) {
-      const acceptedUser = await this.userRepository.findOne({ where: { id: userId } });
+      const acceptedUser = await this.userRepository.findOne({
+        where: { id: userId },
+      });
       this.notificationService
-        .handleEscrowEvent(escrow.creatorId, NotificationEventType.PARTY_ACCEPTED, {
-          escrowId,
-          escrowTitle: escrow.title,
-          role: party.role,
-          acceptedByUserId: userId,
-          email: acceptedUser?.email ?? undefined,
-        })
+        .handleEscrowEvent(
+          escrow.creatorId,
+          NotificationEventType.PARTY_ACCEPTED,
+          {
+            escrowId,
+            escrowTitle: escrow.title,
+            role: party.role,
+            acceptedByUserId: userId,
+            email: acceptedUser?.email ?? undefined,
+          },
+        )
         .catch(() => undefined);
     }
 
@@ -1246,7 +1264,9 @@ export class EscrowService {
 
     if (!party) throw new NotFoundException('Party invitation not found');
     if (party.userId !== userId)
-      throw new ForbiddenException('You can only respond to your own invitation');
+      throw new ForbiddenException(
+        'You can only respond to your own invitation',
+      );
     if (party.status !== PartyStatus.PENDING)
       throw new BadRequestException(`Invitation already ${party.status}`);
 
@@ -1254,28 +1274,43 @@ export class EscrowService {
     party.respondedAt = new Date();
     await this.partyRepository.save(party);
 
-    await this.logEvent(escrowId, EscrowEventType.PARTY_REJECTED, userId, { partyId }, ipAddress);
+    await this.logEvent(
+      escrowId,
+      EscrowEventType.PARTY_REJECTED,
+      userId,
+      { partyId },
+      ipAddress,
+    );
 
     const escrow = party.escrow;
     if (escrow) {
-      const rejectedUser = await this.userRepository.findOne({ where: { id: userId } });
+      const rejectedUser = await this.userRepository.findOne({
+        where: { id: userId },
+      });
 
       if (escrow.creatorId) {
         this.notificationService
-          .handleEscrowEvent(escrow.creatorId, NotificationEventType.PARTY_REJECTED, {
-            escrowId,
-            escrowTitle: escrow.title,
-            role: party.role,
-            rejectedByUserId: userId,
-            email: rejectedUser?.email ?? undefined,
-          })
+          .handleEscrowEvent(
+            escrow.creatorId,
+            NotificationEventType.PARTY_REJECTED,
+            {
+              escrowId,
+              escrowTitle: escrow.title,
+              role: party.role,
+              rejectedByUserId: userId,
+              email: rejectedUser?.email ?? undefined,
+            },
+          )
           .catch(() => undefined);
       }
 
       // Auto-cancel when a required party (buyer or seller) rejects a PENDING escrow
-      const isRequired = party.role === PartyRole.BUYER || party.role === PartyRole.SELLER;
+      const isRequired =
+        party.role === PartyRole.BUYER || party.role === PartyRole.SELLER;
       if (isRequired && escrow.status === EscrowStatus.PENDING) {
-        await this.escrowRepository.update(escrowId, { status: EscrowStatus.CANCELLED });
+        await this.escrowRepository.update(escrowId, {
+          status: EscrowStatus.CANCELLED,
+        });
         await this.logEvent(
           escrowId,
           EscrowEventType.CANCELLED,
@@ -1283,7 +1318,9 @@ export class EscrowService {
           { reason: `Required party (${party.role}) rejected the invitation` },
           ipAddress,
         );
-        await this.webhookService.dispatchEvent('escrow.cancelled', { escrowId });
+        await this.webhookService.dispatchEvent('escrow.cancelled', {
+          escrowId,
+        });
       }
     }
 
@@ -1381,7 +1418,9 @@ export class EscrowService {
     const escrow = await this.findOne(escrowId);
 
     if (escrow.type !== EscrowType.MILESTONE) {
-      throw new BadRequestException('Only milestone escrows support partial releases');
+      throw new BadRequestException(
+        'Only milestone escrows support partial releases',
+      );
     }
 
     if (escrow.status !== EscrowStatus.ACTIVE) {
@@ -1399,7 +1438,9 @@ export class EscrowService {
     );
 
     if (!isDepositor && !isArbitrator) {
-      throw new ForbiddenException('Only depositor or arbitrator can release a milestone');
+      throw new ForbiddenException(
+        'Only depositor or arbitrator can release a milestone',
+      );
     }
 
     // Find the condition
@@ -1413,7 +1454,9 @@ export class EscrowService {
     }
 
     if (!condition.isMet) {
-      throw new BadRequestException('Milestone must be confirmed before releasing');
+      throw new BadRequestException(
+        'Milestone must be confirmed before releasing',
+      );
     }
 
     if (!condition.amount) {
@@ -1428,7 +1471,8 @@ export class EscrowService {
 
     // Calculate released amount
     const releaseAmount = parseFloat(condition.amount.toString());
-    const newReleasedAmount = parseFloat(escrow.releasedAmount.toString()) + releaseAmount;
+    const newReleasedAmount =
+      parseFloat(escrow.releasedAmount.toString()) + releaseAmount;
 
     // Update escrow
     escrow.releasedAmount = newReleasedAmount;
@@ -1440,8 +1484,10 @@ export class EscrowService {
     );
 
     // If all are released, set escrow to completed
-    if (newReleasedAmount >= parseFloat(escrow.amount.toString()) ||
-        newReleasedAmount >= totalMilestonesAmount) {
+    if (
+      newReleasedAmount >= parseFloat(escrow.amount.toString()) ||
+      newReleasedAmount >= totalMilestonesAmount
+    ) {
       escrow.status = EscrowStatus.COMPLETED;
       escrow.isReleased = true;
     }
@@ -1455,12 +1501,10 @@ export class EscrowService {
     await this.conditionRepository.save(condition);
 
     // Log the event
-    await this.logEvent(
-      escrowId,
-      EscrowEventType.MILESTONE_RELEASED,
-      userId,
-      { conditionId, amount: releaseAmount },
-    );
+    await this.logEvent(escrowId, EscrowEventType.MILESTONE_RELEASED, userId, {
+      conditionId,
+      amount: releaseAmount,
+    });
 
     // Dispatch webhook
     await this.webhookService.dispatchEvent('escrow.milestone_released', {

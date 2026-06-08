@@ -124,10 +124,8 @@ export class EmailSender implements NotificationSender {
         `You have been invited to participate as ${role} in escrow "${escrowTitle}" (${escrowId}).` +
         this.optionalAmount(amount, asset) +
         (actionUrl ? `` : ' Log in to accept or reject the invitation.'),
-      [NotificationEventType.PARTY_ACCEPTED]:
-        `A party has accepted their ${role} invitation for escrow ${escrowId}.`,
-      [NotificationEventType.PARTY_REJECTED]:
-        `A party has rejected their ${role} invitation for escrow ${escrowId}.`,
+      [NotificationEventType.PARTY_ACCEPTED]: `A party has accepted their ${role} invitation for escrow ${escrowId}.`,
+      [NotificationEventType.PARTY_REJECTED]: `A party has rejected their ${role} invitation for escrow ${escrowId}.`,
       [NotificationEventType.ESCROW_CREATED]:
         `A new escrow (${escrowId}) has been created.` +
         this.optionalAmount(amount, asset),

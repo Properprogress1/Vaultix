@@ -97,9 +97,14 @@ export class EscrowController {
   }
 
   @Get('pending-invitations')
-  @ApiOperation({ summary: 'List escrows where the authenticated user has a pending party invitation' })
+  @ApiOperation({
+    summary:
+      'List escrows where the authenticated user has a pending party invitation',
+  })
   async getPendingInvitations(@Request() req: AuthenticatedRequest) {
-    return this.escrowService.getPendingInvitations(this.getAuthenticatedUserId(req));
+    return this.escrowService.getPendingInvitations(
+      this.getAuthenticatedUserId(req),
+    );
   }
 
   @Get(':id')
