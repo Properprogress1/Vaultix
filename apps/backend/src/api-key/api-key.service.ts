@@ -37,7 +37,7 @@ export class ApiKeysService {
       keyHash,
       keyPrefix,
       scopes: dto.scopes,
-      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       rateLimitPerMinute: 200,
     });
 
