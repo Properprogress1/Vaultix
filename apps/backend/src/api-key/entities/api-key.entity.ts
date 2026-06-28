@@ -1,10 +1,12 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
+  PrimaryColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  BeforeInsert,
 } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
 
 export enum ApiKeyScope {
   READ_ESCROWS = 'read:escrows',
@@ -13,10 +15,17 @@ export enum ApiKeyScope {
   ADMIN = 'admin',
 }
 
-@Entity()
+@Entity('api_key')
 export class ApiKey {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn('varchar')
   id!: string;
+
+  @BeforeInsert()
+  generateId() {
+    if (!this.id) {
+      this.id = uuidv4();
+    }
+  }
 
   @Column()
   userId!: string;
