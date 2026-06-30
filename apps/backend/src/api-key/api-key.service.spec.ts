@@ -4,7 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { ApiKey, ApiKeyScope } from './entities/api-key.entity';
 import { Repository } from 'typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { verifyKey } from './utils/api-key.util';
+import * as apiKeyUtils from './utils/api-key.util';
 
 describe('ApiKeysService', () => {
   let service: ApiKeysService;
@@ -18,11 +18,14 @@ describe('ApiKeysService', () => {
           provide: getRepositoryToken(ApiKey),
           useValue: {
             create: jest.fn().mockImplementation((dto) => dto),
-            save: jest
-              .fn()
-              .mockImplementation((dto) =>
-                Promise.resolve({ ...dto, id: 'k1', createdAt: new Date(), updatedAt: new Date() }),
-              ),
+            save: jest.fn().mockImplementation((dto) =>
+              Promise.resolve({
+                ...dto,
+                id: 'k1',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }),
+            ),
             findOne: jest.fn(),
             find: jest.fn(),
             count: jest.fn(),
@@ -45,7 +48,7 @@ describe('ApiKeysService', () => {
         scopes: [ApiKeyScope.READ_ESCROWS, ApiKeyScope.READ_ANALYTICS],
       };
       const result = await service.create('u1', dto);
-      
+
       expect(result).toHaveProperty('key');
       expect(result.name).toBe('Test Key');
       expect(result.keyPrefix).toMatch(/^vlt_/);
@@ -73,7 +76,7 @@ describe('ApiKeysService', () => {
         expiresAt: '2025-12-31T23:59:59Z',
       };
       const result = await service.create('u1', dto);
-      
+
       expect(result.expiresAt).toBeInstanceOf(Date);
     });
   });
@@ -82,16 +85,16 @@ describe('ApiKeysService', () => {
     it('should find by raw key hash', async () => {
       const mockKey = { id: 'k1', isActive: true, keyHash: 'hash' };
       repo.find.mockResolvedValue([mockKey as any]);
-      
-      jest.spyOn(require('./utils/api-key.util'), 'verifyKey').mockResolvedValue(true);
-      
+
+      jest.spyOn(apiKeyUtils, 'verifyKey').mockResolvedValue(true);
+
       const result = await service.findByRawKey('raw-key');
       expect(result).toBeDefined();
     });
 
     it('should return null for invalid key', async () => {
       repo.find.mockResolvedValue([]);
-      
+
       const result = await service.findByRawKey('invalid-key');
       expect(result).toBeNull();
     });
@@ -114,7 +117,7 @@ describe('ApiKeysService', () => {
         },
       ];
       repo.find.mockResolvedValue(mockKeys as any);
-      
+
       const result = await service.list('u1');
       expect(result).toHaveLength(1);
       expect(result[0]).not.toHaveProperty('keyHash');
@@ -138,7 +141,7 @@ describe('ApiKeysService', () => {
         updatedAt: new Date(),
       };
       repo.findOne.mockResolvedValue(mockKey as any);
-      
+
       const result = await service.findOne('k1', 'u1');
       expect(result).toBeDefined();
       expect(result.id).toBe('k1');
@@ -146,7 +149,7 @@ describe('ApiKeysService', () => {
 
     it('should throw if key not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      
+
       await expect(service.findOne('k1', 'u1')).rejects.toThrow(
         NotFoundException,
       );
@@ -163,14 +166,14 @@ describe('ApiKeysService', () => {
         isActive: true,
       };
       repo.findOne.mockResolvedValue(mockKey as any);
-      
+
       const dto = {
         name: 'New Name',
         scopes: [ApiKeyScope.READ_ESCROWS, ApiKeyScope.WRITE_ESCROWS],
       };
-      
+
       await service.update('k1', 'u1', dto);
-      
+
       expect(mockKey.name).toBe('New Name');
       expect(mockKey.scopes).toEqual(dto.scopes);
       expect(repo.save).toHaveBeenCalled();
@@ -178,7 +181,7 @@ describe('ApiKeysService', () => {
 
     it('should throw if key not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      
+
       await expect(service.update('k1', 'u1', { name: 'New' })).rejects.toThrow(
         NotFoundException,
       );
@@ -204,7 +207,7 @@ describe('ApiKeysService', () => {
 
     it('should throw if not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      
+
       await expect(service.revoke('k1', 'u1')).rejects.toThrow(
         NotFoundException,
       );
@@ -240,7 +243,7 @@ describe('ApiKeysService', () => {
 
     it('should throw if key not found', async () => {
       repo.findOne.mockResolvedValue(null);
-      
+
       await expect(service.rotate('k1', 'u1')).rejects.toThrow(
         NotFoundException,
       );
@@ -250,10 +253,12 @@ describe('ApiKeysService', () => {
   describe('updateLastUsedAt', () => {
     it('should update lastUsedAt timestamp', async () => {
       repo.update.mockResolvedValue({} as any);
-      
+
       await service.updateLastUsedAt('k1');
-      
-      expect(repo.update).toHaveBeenCalledWith('k1', { lastUsedAt: expect.any(Date) });
+
+      expect(repo.update).toHaveBeenCalledWith('k1', {
+        lastUsedAt: expect.any(Date),
+      });
     });
   });
 
