@@ -12,7 +12,10 @@ import { ApiKey } from '../entities/api-key.entity';
 
 interface RequestWithApiKey extends Request {
   apiKey?: ApiKey;
-  user?: any;
+  user?: {
+    sub: string;
+    apiKeyId: string;
+  };
 }
 
 @Injectable()
@@ -28,7 +31,7 @@ export class ApiKeyGuard implements CanActivate {
     const res = http.getResponse<Response>();
 
     const rawKey = req.header('X-API-Key');
-    
+
     // If no API key provided, allow JWT auth to handle it
     if (!rawKey) {
       return true;
